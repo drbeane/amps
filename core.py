@@ -20,7 +20,7 @@ def generate_distractor(min_diff, max_diff, ans, distractors, max_attempts=1000)
         if valid:
             return d
     
-    print('No distractor able to be found. ')
+    print('No distractor found. ')
     0/0
         
 
@@ -68,7 +68,8 @@ def process_lines(lines):
             line = line.strip(' ')
             if line == '':
                 #text += '<!--newline--!>'
-                text += '<p>&nbsp;</p>'
+                #text += '<p>&nbsp;</p>'            # This might be what should be here. Dunno.
+                text += '</br>'
             else:
                 text += line + ' '
     text = text.strip(' ')
@@ -126,6 +127,8 @@ class Question:
         
 
     def generate(self, n=1, attempts=1000, prevent_duplicates=True):
+        from IPython.core.display import HTML, display
+        
         self.versions = []
         
         generation_attempts = 0
@@ -160,15 +163,22 @@ class Question:
                     }
                     self.versions.append(q)
                     break
-                
-        print(f'{generation_attempts} attempts required to generate {n} questions. {duplicates_encountered} duplicates regenerated.')
-            
+        
+        display(HTML('<h4>Generating Versions</h4>'))
+        print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n')
+        
 
 
-    def display(self, size=3, limit=None):
+    def display_versions(self, size=3, limit=None, compact_answers=True):
         from IPython.display import HTML, display
+        
+        if len(self.versions) == 0:
+            print('No versions have been generated. Please call the generate() method.')
+            return
+        
         if limit is None: limit = len(self.versions) 
         
+        display(HTML('<h4>Displaying Versions</h4>'))
         for i in range(limit):
             text = self.versions[i]['text']
             answer = self.versions[i]['answer']
@@ -176,11 +186,20 @@ class Question:
             
             #text = text.replace('<!--newline--!>', '\n\n')
             
-            print('-'*128)
+            display(HTML(f'<h5>Version {i+1}</h5>'))
             display(HTML(f'<font size="{size}">{text}</font>'))
             print()
-            print(answer, ' ', distractors)
-        print('-'*128)
+            if compact_answers:
+                distractor_str = ", ".join([str(d) for d in distractors])
+                print(f'Answer: {answer} \nDistractors: {distractor_str}')
+            else:
+                print(f'[a] {answer}')
+                letters = list('bcdefghijklmnopqrstuvwzyz')[:len(distractors)]
+                for x,d in zip(letters, distractors):
+                    print(f'({x}) {d}')
+                
+            print()    
+        
         
 
     def generate_qti_text(self, shuffle=True):
