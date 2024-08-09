@@ -72,8 +72,9 @@ def process_lines(lines):
                 text += '</br>'
             else:
                 text += line + ' '
-    text = text.strip(' ')
-    text = text.strip('<p>&nbsp;</p>')
+    
+    while text[-5:] == '</br>':
+        text = text[:-5]
     
     answer = variables['ANS']
     
@@ -164,13 +165,13 @@ class Question:
                     self.versions.append(q)
                     break
         
-        display(HTML('<h4>Generating Versions</h4>'))
+        display(HTML('<h3>Generating Versions</h3>'))
         print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n')
         
 
 
     def display_versions(self, size=3, limit=None, compact_answers=True):
-        from IPython.display import HTML, display
+        from IPython.display import HTML, display, Markdown
         
         if len(self.versions) == 0:
             print('No versions have been generated. Please call the generate() method.')
@@ -178,7 +179,7 @@ class Question:
         
         if limit is None: limit = len(self.versions) 
         
-        display(HTML('<h4>Displaying Versions</h4>'))
+        display(HTML('<h3>Displaying Versions</h3>'))
         for i in range(limit):
             text = self.versions[i]['text']
             answer = self.versions[i]['answer']
@@ -186,8 +187,8 @@ class Question:
             
             #text = text.replace('<!--newline--!>', '\n\n')
             
-            display(HTML(f'<h5>Version {i+1}</h5>'))
-            display(HTML(f'<font size="{size}">{text}</font>'))
+            display(HTML(f'<h4>Version {i+1}</h4>'))
+            display(Markdown(f'<font size="{size}">{text}</font>'))
             print()
             if compact_answers:
                 distractor_str = ", ".join([str(d) for d in distractors])
