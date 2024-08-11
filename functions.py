@@ -10,7 +10,6 @@ def RANGE(start, stop, step, exclude=None):
         if x not in exclude:
             return x
 
-
 def ROUND(x, nearest):
     #print(x / nearest)
     x = round(x / nearest) * nearest

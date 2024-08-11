@@ -7,6 +7,16 @@ NUM_DIST = 4
 ANS_PREC = 0.0001
 PRES_SIGN = False
 
+config = dict(
+    MIN_DIFF = 0.02,
+    MAX_DIFF = 0.10,
+    NUM_DIST = 4,
+    ANS_PREC = 0.0001,
+    PRES_SIGN = False
+)
+    
+
+
 def generate_distractor(min_diff, max_diff, ans, distractors, max_attempts=1000):
     min_abs_diff = min_diff * ans
     for i in range(max_attempts):    
@@ -59,10 +69,18 @@ def process_lines(lines):
             distractors.append(dist)
         
         elif mode == 'CONFIG':
-            exec(line)
+            #exec(line)
+            
+            a, b = line.split('=')
+            a = a.strip()
+            b = b.strip()
+            config[a] = b
+            print(config)
+            
             if 'ANS_PREC' in line:
                 _, dec_portion = line.split('.')
                 dec_digits = len(dec_portion)
+                #print('hullo', ANS_PREC, _, dec_portion)
             
         elif mode == 'TEXT':
             line = line.strip(' ')
@@ -85,6 +103,8 @@ def process_lines(lines):
         distractors.append(d)
         
     # Round Answer and Distractors
+    ANS_PREC = float(config['ANS_PREC'])
+    print(ANS_PREC)
     variables['ANS'] = ROUND(answer, ANS_PREC)
     distractors = [ROUND(d, ANS_PREC) for d in distractors]
                 
@@ -111,17 +131,30 @@ class Question:
 
         
         text, variables, distractors, self.dec_digits = process_lines(lines)
-
-        #print('Vars:', variables, '\n')
         
         if text is None:
             return None, None, None
+
+        #print(text)
+        #print(variables)
+        #print(distractors)
+        #return
+
+        #print('Vars:', variables, '\n')
+
+        text = text.replace('{', '_OB_')
+        text = text.replace('}', '_CB_')
+        text = text.replace('[[', '{')
+        text = text.replace(']]', '}')
         
         var_string = ', '.join([f'{k}={v}' for k,v in variables.items()])
         
         format_message = 'text.format({var_string})'.format(var_string=var_string)
         
+        
         final_text = eval(format_message)
+        final_text = final_text.replace('_OB_', '{')
+        final_text = final_text.replace('_CB_', '}')
         final_text = final_text.rstrip('\n')
         
         return final_text, variables['ANS'], distractors
@@ -178,6 +211,7 @@ class Question:
             return
         
         if limit is None: limit = len(self.versions) 
+        limit = min(limit, len(self.versions))
         
         display(HTML('<h3>Displaying Versions</h3>'))
         for i in range(limit):
@@ -194,10 +228,11 @@ class Question:
                 distractor_str = ", ".join([str(d) for d in distractors])
                 print(f'Answer: {answer} \nDistractors: {distractor_str}')
             else:
-                print(f'[a] {answer}')
+                #.{self.dec_digits}f
+                print(f'[a] {answer:.{self.dec_digits}f}')
                 letters = list('bcdefghijklmnopqrstuvwzyz')[:len(distractors)]
                 for x,d in zip(letters, distractors):
-                    print(f'({x}) {d}')
+                    print(f'({x}) {d:.{self.dec_digits}f}')
                 
             print()    
         
