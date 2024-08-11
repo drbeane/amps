@@ -166,13 +166,16 @@ class Question:
         return final_text, variables['ANS'], distractors, answer_options
         
 
-    def generate(self, n=1, attempts=1000, prevent_duplicates=True):
+    def generate(self, n=1, seed=None, attempts=1000, prevent_duplicates=True):
         from IPython.core.display import HTML, display
         
         self.versions = []
         
         generation_attempts = 0
         duplicates_encountered = 0
+        
+        if seed is not None:
+            np.random.seed(seed)
         
         # Loop over the number of questions
         for i in range(n):
