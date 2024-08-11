@@ -37,6 +37,7 @@ def generate_distractor(min_diff, max_diff, ans, distractors, max_attempts=1000)
 def process_lines(lines):
     variables = {}
     distractors = []
+    answer_options = []
 
     mode = None
     text = ''
@@ -48,41 +49,40 @@ def process_lines(lines):
             pass
 
         # Determine the mode
-        elif line in ['VARIABLES', 'CONDITIONS', 'DISTRACTORS', 'TEXT', 'CONFIG']:
+        elif line[:4] == '#---':
             mode = line
 
-        elif mode == 'VARIABLES':
-            exec(line)
+        elif mode == '#---VARIABLES---#':
+            # After running the line below, the variable will be created
+            # But must be accessed using eval(var_name)
+            exec(line)  
             if '=' in line:
-                var_name = line.replace(' ', '').split('=')[0]
-                #variables.append(var_name)
+                var_name, expr = line.replace(' ', '').split('=')
                 variables[var_name] = eval(var_name)
 
-        elif mode == 'CONDITIONS':
+        elif mode == '#---CONDITIONS---#':
             valid = eval(line)
             if not valid:
                 #print('invalid')
-                return None, None, None, None
+                return None, None, None, None, None
             
-        elif mode == 'DISTRACTORS':
-            dist = eval(line)
-            distractors.append(dist)
+        elif mode == '#---DISTRACTORS---#':
+            exec(line)
+            if '=' in line:
+                var_name, expr = line.replace(' ', '').split('=')
+                value = eval(var_name)
+                variables[var_name] = value
+            
+            #dist = eval(line)
+            distractors.append(value)
         
-        elif mode == 'CONFIG':
-            #exec(line)
+        elif mode == '#---CONFIG---#':
+            exec(line)
+            var_name, expr = line.replace(' ', '').split('=')
+            config[var_name] = eval(var_name)
             
-            a, b = line.split('=')
-            a = a.strip()
-            b = b.strip()
-            config[a] = b
-            print(config)
             
-            if 'ANS_PREC' in line:
-                _, dec_portion = line.split('.')
-                dec_digits = len(dec_portion)
-                #print('hullo', ANS_PREC, _, dec_portion)
-            
-        elif mode == 'TEXT':
+        elif mode == '#---TEXT---#':
             line = line.strip(' ')
             if line == '':
                 #text += '<!--newline--!>'
@@ -90,6 +90,13 @@ def process_lines(lines):
                 text += '</br>'
             else:
                 text += line + ' '
+                
+        elif mode == '#---ANSWER_OPTIONS---#':
+            line = f"f'{line}'"
+            ao = eval(line)
+            answer_options.append(ao)
+    
+    #print(answer_options)
     
     while text[-5:] == '</br>':
         text = text[:-5]
@@ -97,6 +104,10 @@ def process_lines(lines):
     answer = variables['ANS']
     
     # Pad Distractors
+    
+    #-----------------------------------------
+    # I need to revisit this
+    #-----------------------------------------
     n = NUM_DIST - len(distractors)
     for i in range(n):
         d = generate_distractor(MIN_DIFF, MAX_DIFF, answer, distractors)
@@ -104,11 +115,13 @@ def process_lines(lines):
         
     # Round Answer and Distractors
     ANS_PREC = float(config['ANS_PREC'])
-    print(ANS_PREC)
+    _, dec_portion = str(ANS_PREC).split('.')
+    dec_digits = len(dec_portion)
+    
     variables['ANS'] = ROUND(answer, ANS_PREC)
     distractors = [ROUND(d, ANS_PREC) for d in distractors]
                 
-    return text, variables, distractors, dec_digits
+    return text, variables, distractors, answer_options, dec_digits
 
 class Question:
 
@@ -130,17 +143,10 @@ class Question:
         lines = self.q_string.split('\n')
 
         
-        text, variables, distractors, self.dec_digits = process_lines(lines)
+        text, variables, distractors, answer_options, self.dec_digits = process_lines(lines)
         
         if text is None:
-            return None, None, None
-
-        #print(text)
-        #print(variables)
-        #print(distractors)
-        #return
-
-        #print('Vars:', variables, '\n')
+            return None, None, None, None
 
         text = text.replace('{', '_OB_')
         text = text.replace('}', '_CB_')
@@ -157,7 +163,7 @@ class Question:
         final_text = final_text.replace('_CB_', '}')
         final_text = final_text.rstrip('\n')
         
-        return final_text, variables['ANS'], distractors
+        return final_text, variables['ANS'], distractors, answer_options
         
 
     def generate(self, n=1, attempts=1000, prevent_duplicates=True):
@@ -173,7 +179,7 @@ class Question:
             # Attempt to generated a problem
             for k in range(attempts):
                 generation_attempts += 1
-                text, answer, distractors = self.try_generate()
+                text, answer, distractors, answer_options = self.try_generate()
                 
                 
                 success = True
@@ -193,7 +199,8 @@ class Question:
                     q = {
                         'text':text,
                         'answer':answer,
-                        'distractors':distractors
+                        'distractors':distractors,
+                        'answer_options': answer_options
                     }
                     self.versions.append(q)
                     break
@@ -218,6 +225,7 @@ class Question:
             text = self.versions[i]['text']
             answer = self.versions[i]['answer']
             distractors = self.versions[i]['distractors']
+            answer_options = self.versions[i]['answer_options']
             
             #text = text.replace('<!--newline--!>', '\n\n')
             
@@ -225,14 +233,19 @@ class Question:
             display(Markdown(f'<font size="{size}">{text}</font>'))
             print()
             if compact_answers:
-                distractor_str = ", ".join([str(d) for d in distractors])
-                print(f'Answer: {answer} \nDistractors: {distractor_str}')
+                print(answer_options)
+                #distractor_str = ", ".join([str(d) for d in distractors])
+                #print(f'Answer: {answer} \nDistractors: {distractor_str}')
             else:
-                #.{self.dec_digits}f
-                print(f'[a] {answer:.{self.dec_digits}f}')
-                letters = list('bcdefghijklmnopqrstuvwzyz')[:len(distractors)]
-                for x,d in zip(letters, distractors):
-                    print(f'({x}) {d:.{self.dec_digits}f}')
+                letters = list('abcdefghijklmnopqrstuvwzyz')
+                for i, ao in enumerate(answer_options):
+                    x = letters[i]
+                    print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                
+                #print(f'[a] {answer:.{self.dec_digits}f}')
+                #letters = list('bcdefghijklmnopqrstuvwzyz')[:len(distractors)]
+                #for x,d in zip(letters, distractors):
+                #    print(f'({x}) {d:.{self.dec_digits}f}')
                 
             print()    
         
