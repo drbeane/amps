@@ -57,7 +57,8 @@ def process_lines(lines):
             # But must be accessed using eval(var_name)
             exec(line)  
             if '=' in line:
-                var_name, expr = line.replace(' ', '').split('=')
+                #var_name, expr = line.replace(' ', '').split('=')
+                var_name = line.replace(' ', '').split('=')[0]
                 variables[var_name] = eval(var_name)
 
         elif mode == '#---CONDITIONS---#':
@@ -89,7 +90,7 @@ def process_lines(lines):
                 #text += '<p>&nbsp;</p>'            # This might be what should be here. Dunno.
                 text += '</br>'
             else:
-                text += line + ' '
+                text += line + ' ' + '</br>'
                 
         elif mode == '#---ANSWER_OPTIONS---#':
             line = f"f'{line}'"
@@ -119,6 +120,7 @@ def process_lines(lines):
     dec_digits = len(dec_portion)
     
     variables['ANS'] = ROUND(answer, ANS_PREC)
+    
     distractors = [ROUND(d, ANS_PREC) for d in distractors]
                 
     return text, variables, distractors, answer_options, dec_digits
