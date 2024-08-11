@@ -215,7 +215,7 @@ class Question:
         
 
 
-    def display_versions(self, size=3, limit=None, compact_answers=True):
+    def display_versions(self, size=3, limit=None, compact_answers=False):
         from IPython.display import HTML, display, Markdown
         
         if len(self.versions) == 0:
