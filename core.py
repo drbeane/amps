@@ -59,7 +59,8 @@ def process_lines(lines):
             if '=' in line:
                 #var_name, expr = line.replace(' ', '').split('=')
                 var_name = line.replace(' ', '').split('=')[0]
-                variables[var_name] = eval(var_name)
+                if 'lambda' not in line:
+                    variables[var_name] = eval(var_name)
 
         elif mode == '#---CONDITIONS---#':
             valid = eval(line)
