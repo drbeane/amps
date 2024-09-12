@@ -94,11 +94,16 @@ def COMBIN(n, r):
     assert(r == int(r))
     return FACT(n) / FACT(r) / FACT(n - r)
 
-def MIN(x):
-    return min(x)
+def PERM(n, r):
+    assert(n == int(n))
+    assert(r == int(r))
+    return FACT(n) / FACT(n - r) 
 
-def MAX(x):
-    return max(x)
+def MIN(values):
+    return min(values)
+
+def MAX(values):
+    return max(values)
 
 if __name__ == '__main__':
     #print(RANGE(10, 150, 5))
