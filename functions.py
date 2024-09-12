@@ -105,6 +105,51 @@ def MIN(values):
 def MAX(values):
     return max(values)
 
+
+def TABLE(contents, config=None):
+
+    default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
+    if config == None: config = {}
+    for k,v in default_config.items():
+        if k not in config.keys():
+            config[k] = v
+        
+    
+    t = '<table style="border:1px solid black; background-color:#FFFFFF">\n'
+    for i, row in enumerate(contents):
+        # Determine height
+        temp = config['ch']
+        ch = temp[i] if type(temp) == list else temp
+
+        # Start row
+        t += f'<tr style="height:{ch}px">\n'
+        
+        for j, x in enumerate(row):
+
+            # Determine Cell Color
+            col = '#FFFFFF'
+            if (config['sr1'] and i == 0) or (config['sc1'] and j == 0):
+                col = '#E0E0E0'
+                x = f'<b>{x}</b>'
+
+            # Determine width
+            temp = config['cw']
+            cw = temp[j] if type(temp) == list else temp
+            
+            # Alignment
+            temp = config['align']
+            align = temp[j] if type(temp) == list else temp
+            a = {'C':'center', 'L':'left', 'R':'right'}[align]
+                
+            t += f'<td  style="border:1px solid black; background-color:{col}; '
+            t += f'width:{cw}px; text-align:{a}">'
+            t += f'{x}</td>\n'
+
+        t += '</tr>\n'
+    t += '</table>\n'
+    
+    return t
+
 if __name__ == '__main__':
     #print(RANGE(10, 150, 5))
     #print(ROUND(36.5, 5))

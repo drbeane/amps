@@ -15,6 +15,7 @@ def process_template(lines, testing_level=0):
     text = ''
     need_new_par = True
     need_end_par = False
+    table_mode = False
     
     for line in lines:
         if testing_level > 4: print(line)
@@ -96,6 +97,9 @@ def process_template(lines, testing_level=0):
             elif line[:3] == '...':
                 line = line[3:].strip(' ')
                 text += ' ' + line
+            
+            elif line == 'TABLE':
+                print('starting table')
             
             # Standard line of text. This will either start a new par or a new line.
             else:

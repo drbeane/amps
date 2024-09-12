@@ -104,6 +104,9 @@ class Question:
         text = ''
         need_new_par = True
         need_end_par = False
+        table_mode = False
+        table_contents = []
+        table_config = {}
         
         lines = self.qt.split('\n')
         
@@ -174,10 +177,39 @@ class Question:
                 
                 line = line.strip(' ')
                 
+                # Process Tables
+                if line == 'TABLE':
+                    table_mode = True
+                    
+                elif line == 'END TABLE':
+                    text += TABLE(table_contents, table_config)
+                    
+                    table_mode = False
+                    table_contents = []
+                    table_config = {}
+                    
+                
+                elif table_mode == True:
+                    if line[0] == '|':
+                        cells = line.split('|')[1:-1]
+                        cells = [c.strip(' ') for c in cells]
+                        table_contents.append(cells)
+                    else:
+                        params = line.split(',')
+                        for p_set in params:
+                            p,v = p_set.split(':')
+                            p = p.strip(' ')
+                            v = v.strip(' ')
+                            if np.char.isnumeric(v) or v == 'True' or v == 'False':
+                                v = eval(v)
+                            table_config[p.lower()] = v
+                    
+                        
+                
                 # A blank line indicates the start of a new paragraph. 
                 # Consecutive blank lines are treated as a single blank line (at least for now)
                 # The <p> tag will be added at a later line. 
-                if line == '':
+                elif line == '':
                     need_new_par = True
                     if need_end_par == True:
                         text += '</p>'
@@ -219,7 +251,7 @@ class Question:
         
         for k, v in scope.items():
             if isinstance(v, float):
-                scope[k] = v.round(12)
+                scope[k] = round(v, 12)
             
         
         
@@ -251,12 +283,12 @@ class Question:
         if limit is None: limit = len(self.versions) 
         limit = min(limit, len(self.versions))
         
-        display(HTML('<h3>Displaying Versions</h3>'))
+        display(HTML('<b>Displaying Versions</b><br /><br />'))
         for i in range(limit):
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<h4>Version {i+1}</h4>'))
+            display(HTML(f'<b>Version {i+1}</b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
             print()
             if compact_answers:
