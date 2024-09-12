@@ -1,4 +1,4 @@
-from amps.functions import *
+#from amps.functions import *
 
 def process_template(lines, testing_level=0):
     from IPython.core.display import HTML, display
@@ -186,7 +186,17 @@ def DISPLAY(x, scope):
     fmt = 'U' if len(params) == 1 else params[1].strip()
 
     if prec != '':
+        
+        # If var_name contains operations (x*10) then format method will break.
+        # We will create a temp variable to handle this situation. 
+        if var_name not in scope.keys():
+            scope['__TEMP_VAR__'] = value
+            var_name = '__TEMP_VAR__'
+        
         f_string = '{' + f'{var_name}:.{prec}f' + '}'
+        
+        print(f_string)
+        
         val_string = f_string.format(**scope)
         value = round(value, int(prec))
     
@@ -214,7 +224,15 @@ def DISPLAY(x, scope):
     return val_string
         
     
+if __name__ == '__main__':
+
+    scope = {'x':7.0159}
+    
+    text = 'x*10:2'
+    
+    print(DISPLAY(text, scope))
     
     
     
+
     

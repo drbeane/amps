@@ -171,6 +171,7 @@ class Question:
             #  TEXT
             #-----------------------------------------------
             elif mode == '#---TEXT---#':
+                
                 line = line.strip(' ')
                 
                 # A blank line indicates the start of a new paragraph. 
@@ -209,12 +210,17 @@ class Question:
         # Close final paragraph in text.
         if need_end_par == True: 
             text += '</p>'
-            
+        
         if testing_level >=5: 
             print(f'\nQUESTION TEXT:\n{text}')
         
         # Delete builtins. Just for tidiness. 
         del scope['__builtins__']
+        
+        for k, v in scope.items():
+            if isinstance(v, float):
+                scope[k] = v.round(12)
+            
         
         
         # Insert variables into text and answer options. 
@@ -287,11 +293,12 @@ def insert_vars(text, scope):
 
         
 def DISPLAY(x, scope):
-    
+       
     tokens = x.split(':')
     
     var_name = tokens[0]
     value = eval(var_name, scope)
+    
     
     # If only a value is supplied, find it and move on
     if len(tokens) == 1:
@@ -305,6 +312,12 @@ def DISPLAY(x, scope):
     fmt = 'U' if len(params) == 1 else params[1].strip()
 
     if prec != '':
+        # If var_name contains operations (x*10) then format method will break.
+        # We will create a temp variable to handle this situation. 
+        if var_name not in scope.keys():
+            scope['__TEMP_VAR__'] = value
+            var_name = '__TEMP_VAR__'
+        
         f_string = '{' + f'{var_name}:.{prec}f' + '}'
         val_string = f_string.format(**scope)
         value = round(value, int(prec))

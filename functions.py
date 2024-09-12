@@ -84,7 +84,21 @@ def DISTRACTORS(ans, n=4, p_rng=None, step=None, digits=None, seed=None):
 
     return distractors
         
+def FACT(n):
+    import math
+    assert(n == int(n))
+    return math.factorial(int(n))
 
+def COMBIN(n, r):
+    assert(n == int(n))
+    assert(r == int(r))
+    return FACT(n) / FACT(r) / FACT(n - r)
+
+def MIN(x):
+    return min(x)
+
+def MAX(x):
+    return max(x)
 
 if __name__ == '__main__':
     #print(RANGE(10, 150, 5))
@@ -92,7 +106,9 @@ if __name__ == '__main__':
     #print(EXACT_TO(3.47, 0.1))
     #print(not EXACT_TO(3.47, 0.1))
     
-    print(UNIQUE([2, 3, 4]))
-    print(UNIQUE([2, 3, 4.01, 4 + 1/100]))
+    #print(UNIQUE([2, 3, 4]))
+    #print(UNIQUE([2, 3, 4.01, 4 + 1/100]))
+    
+    print(MIN([5, 7, 10]))
     
     
