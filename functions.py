@@ -115,7 +115,7 @@ def TABLE(contents, config=None):
             config[k] = v
         
     
-    t = '<table style="border:1px solid black; background-color:#FFFFFF">\n'
+    t = '<table style="border:1px solid black;  border-spacing:0px; background-color:#FFFFFF">\n'
     for i, row in enumerate(contents):
         # Determine height
         temp = config['ch']
