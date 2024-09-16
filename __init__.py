@@ -1,2 +1,3 @@
 from amps.core import *
-from amps.processing import *
+from amps.functions import *
+from amps.autorender import *
