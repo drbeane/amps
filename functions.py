@@ -45,6 +45,15 @@ def UNIQUE(values):
         return False
     return True
 
+def FLOOR(x):
+    import math
+    return math.floor(x)
+
+
+def CEIL(x):
+    import math
+    return math.ceil(x)
+
 
 def DISTRACTORS_A(ans, n=4, step=1, seed=None):
     if seed is not None:
