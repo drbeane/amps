@@ -1,14 +1,59 @@
 import numpy as np
 
-def RANGE(start, stop, step, exclude=None):
-    while True:
-        rng = np.arange(start, stop+step, step)
-        x = np.random.choice(rng)
-        x = round(x, 10)
-        if exclude is None:
-            return x
-        if x not in exclude:
-            return x
+def RANGE(start, stop, step, exclude=None, repeat=True, shape=None, 
+          length=None, min_diff=None, max_attempts=1000):
+    
+    if length is not None:
+        n = length
+    elif shape is not None:
+        n = np.prod(shape)
+    else:
+        n = 1
+    
+    
+    # Loop until an appropriate colleciton is found
+    # This loop will restart ONLY if we have run out of acceptable options. 
+    for _ in range(max_attempts):
+        
+        values = []
+        # Build list of options
+        options = np.arange(start, stop+step, step).round(10).tolist()
+        if exclude is not None:
+            options = [v for v in options if v not in exclude]
+        
+        failed = False
+        # Loop to generate required number of values
+        for i in range(n):
+            
+            if len(options) == 0:
+                failed = True
+                break  # We have failed and need to start over. 
+            
+            x = np.random.choice(options)     # Select a value
+            values.append(x)
+            
+            # Remove from list if repeats not allowed
+            if repeat == False:
+                options.remove(x)
+            
+            # Remove values that are too close to x
+            if min_diff is not None:
+                options = [v for v in options if round(abs(x - v), 10) >= min_diff]
+
+        # Return values if they were found. Otherwise, restart the loop.         
+        if failed == False:
+            
+            if shape is None and length is None:
+                return values[0]
+
+            if length is not None:
+                return values
+
+            if shape is not None:
+                return np.array(values).reshape(shape)
+        
+    print('Unable to find values satifying the given criteria.')           
+            
 
 def EXP(x):
     return float(np.exp(x))
@@ -113,6 +158,42 @@ def MIN(values):
 
 def MAX(values):
     return max(values)
+
+def ARGMIN(values, axis=None):
+    return np.argmin(values, axis=axis)
+
+def ARGMAX(values, axis=None):
+    return np.argmax(values, axis=axis)
+
+def WHERE(cond, a, b):
+    return np.where(cond, a, b)
+
+
+def MNAME():
+    names = [
+        'Aaron', 'Alex', 'Barry', 'Bryce', 'Carlos', 'Craig', 'Darren', 'Doug', 'Edward', 'Eric', 'Felix', 
+        'Frank', 'Gary', 'Greg', 'Hector', 'Hugo', 'Ian', 'Ivan', 'Jake', 'Juan', 'Kent', 'Kevin', 'Leon', 
+        'Lucas', 'Matt', 'Milo', 'Nathan', 'Nick', 'Oliver', 'Owen', 'Paul', 'Phillip', 'Quentin', 'Quinn', 
+        'Rick', 'Rodney', 'Shawn', 'Scott', 'Toby', 'Tyler', 'Vince', 'Vernon', 'Wade', 'William', 'Zack'
+    ]
+    return np.random.choice(names)
+
+def FNAME():
+    names = [
+        'Abby', 'Allison', 'Beth', 'Bridgett', 'Cindy', 'Clair', 'Dana', 'Darcy', 'Ellen', 'Emma', 'Flora', 
+        'Faye', 'Gail', 'Gloria', 'Hailey', 'Heidi', 'Isabell', 'Ivy', 'Joan', 'Jackie', 'Kate', 'Kayla', 
+        'Lori', 'Leah', 'Marie', 'Megan', 'Nikki', 'Norah', 'Olivia', 'Ophelia', 'Paige', 'Paula', 'Rachel', 
+        'Rose', 'Sadie', 'Selena', 'Tina', 'Tess', 'Vera', 'Vicky', 'Wendy', 'Willa', 'Yolanda', 'Yvonne', 'Zora', 'Zena'
+    ]
+    return np.random.choice(names)
+
+
+def SUM(values):
+    return sum(values)
+
+def SELECT(values):
+    import numpy as np
+    return np.random.choice(values)
 
 
 def TABLE(contents, config=None):

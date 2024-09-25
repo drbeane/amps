@@ -16,6 +16,9 @@ class Question:
         self.qt = qt
         self.id = id
         
+        self.type = 'MC'
+        self.margin = '0'
+        
         # Create items to store information from template
         self.var_script = ''
         self.conditions = []
@@ -68,6 +71,22 @@ class Question:
                 mode = line
             
             #-----------------------------------------------
+            # config
+            #-----------------------------------------------
+            elif mode == '#---CONFIG---#':
+                line = line.strip(' ')
+                line = line.replace('= ', '=')
+                line = line.replace(' =', '=')
+                #print(len(line))
+                param, value = line.split('=')
+                if param == 'type':
+                    self.type = value
+                elif param == 'margin':
+                    self.margin = value
+                elif param == 'id':
+                    self.id = value
+            
+            #-----------------------------------------------
             # VARIABLES
             #-----------------------------------------------
             elif mode == '#---VARIABLES---#':
@@ -111,17 +130,18 @@ class Question:
                         cells = [c.strip(' ') for c in cells]
                         table_contents.append(cells)
                     else:
-                        params = line.split(',')
+                        params = line.split(';')
                         for p_set in params:
                             p,v = p_set.split(':')
                             p = p.strip(' ')
                             v = v.strip(' ')
-                            if np.char.isnumeric(v) or v == 'True' or v == 'False':
+                            if v not in ['C', 'L', 'R']:
+                            #if np.char.isnumeric(v) or v == 'True' or v == 'False':
                                 v = eval(v)
                             table_config[p.lower()] = v
             
                 # A blank line indicates the start of a new paragraph. 
-                # Consecutive blank lines are treated as a single blank line (at least for now)
+                # Multiple consecutive blank lines are treated as a single blank line (at least for now)
                 # The <p> tag will be added at a later line. 
                 elif line == '':
                     need_new_par = True
@@ -282,13 +302,34 @@ class Question:
             display(HTML(f'<b>Version {i+1}</b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
             print()
-            if compact_answers:
-                print(answer_options)
-            else:
-                letters = list('abcdefghijklmnopqrstuvwzyz')
-                for i, ao in enumerate(answer_options):
-                    x = letters[i]
-                    print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+            
+            # Display Multiple Choice Answers
+            if self.type == 'MC':
+                if compact_answers:
+                    print(answer_options)
+                else:
+                    letters = list('abcdefghijklmnopqrstuvwzyz')
+                    for i, ao in enumerate(answer_options):
+                        x = letters[i]
+                        #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                        display(Markdown(f'`[{x}]` {ao}' if i==0 else f'`({x})` {ao}'))
+            
+            if self.type == 'MA':
+                if compact_answers:
+                    print(answer_options)
+                else:
+                    for i, ao in enumerate(answer_options):
+                        #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                        ao_mod = ao
+                        if ao_mod[:3] == '[ ]': ao_mod = '`[ ]`' + ao_mod[3:]
+                        elif ao_mod[:3] == '[X]': ao_mod = '`[X]`' + ao_mod[3:]
+                            
+                        display(Markdown(f'{ao_mod}'))
+            
+                        
+            # Display Numerical Answers
+            elif self.type == 'NUM':
+                print(f'ANSWER: {answer_options[0]} +- {self.margin}')
             print()    
         
         # This is a hack used to fix display in Colab
@@ -296,7 +337,7 @@ class Question:
             from amps.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
             
-    def generate_qti(self, path=''):
+    def generate_qti(self, path='', quiz_version='new', print_versions=0, make_file=True, generate_zip=False):
         
         if len(self.versions) == 0:
             print('No versions have been generated. Please call the generate() method.')
@@ -307,26 +348,65 @@ class Question:
         
         for i, v in enumerate(self.versions):
             
+            version_text = self.versions[i]['text']
+            
+            if quiz_version == 'new':
+                version_text = version_text.replace('</p>', '<br/><br/></p>\n')
+                version_text = version_text.replace('</table>', '</table><p>&nbsp;</p>')
+                        
             num_len = len(str(i+1))
             spaces = ' ' * (num_len + 2)
-            
-            version_text = self.versions[i]['text']
+                        
             version_text = version_text.replace('\n', f'\n{spaces}')
-            
-            
             
             qti_text += f'Title: Version {i+1}\n'
             qti_text += f'Points: 1\n'
             qti_text += f'{i+1}. {version_text}\n'
-            qti_text += '*a) 6\n'
-            qti_text += 'b) 1\n'
-            qti_text += 'c) 7\n\n\n'
             
-        print(qti_text)
+            answer_options = self.versions[i]['answer_options']
+            
+            # Add Multiple Choice Answer Options
+            if self.type == 'MC':
+                letters = list('abcdefghijklmnopqrstuvwzyz')
+                for j, ao in enumerate(answer_options):
+                    x = letters[j]
+                    if x == 'a': x = '*a'
+                    qti_text += f'{x}) {ao}\n' 
+
+            # Add Multiple Answer Options
+            if self.type == 'MA':
+                for j, ao in enumerate(answer_options):
+                    ao_mod = ao.replace('[X]', '[*]')
+                    qti_text += f'{ao_mod}\n' 
+            
+                                            
+            # Add Numerical Answer
+            elif self.type == 'NUM':
+                ans = answer_options[0]
+                qti_text += f'=   {ans} +- {self.margin}'
         
-        with open(f'{path}/{self.id}.txt', 'w') as file:
-            file.write(qti_text)
+            qti_text += '\n\n'
+            
+            if i+1 == print_versions:    
+                print(qti_text)
         
+        if make_file:
+            with open(f'{path}/{self.id}.txt', 'w') as file:
+                file.write(qti_text)
+            
+        if generate_zip:
+            import subprocess
+            cmd = f'text2qti "{path}/{self.id}.txt"'
+            result = subprocess.run(cmd, capture_output=True, text=True)
+        
+            if result.returncode != 0:
+                print(result.returncode)
+                print()
+                print(result.stdout)
+                print()
+                print(result.stderr)
+            else:
+                print('QTI zip generated successfully!')
         
             
 
@@ -335,6 +415,12 @@ def insert_vars(text, scope):
     b = 0
     temp = text
     new_text = ''
+    
+    # Lines below allow for three consecutive [[[
+    # This is a somewhat hacky solution that assumes the var is always on the inside
+    temp = temp.replace('[[[', '__[__[[')
+    temp = temp.replace(']]]', ']]__]__')
+    
     while len(temp) > 0:
         
         a = temp.find('[[')
@@ -349,6 +435,10 @@ def insert_vars(text, scope):
         new_text += DISPLAY(var_string, scope)            
         
         temp = temp[b+2:]
+
+    # This puts the non-var-related square brackets back in.
+    new_text = new_text.replace('__[__', '[')
+    new_text = new_text.replace('__]__', ']')
 
     return new_text
 
