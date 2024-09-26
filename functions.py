@@ -191,6 +191,9 @@ def FNAME():
 def SUM(values):
     return sum(values)
 
+def SUMMATION(start, end, fn):
+    return sum([fn(x) for x in range(start, end+1)])
+
 def SELECT(values):
     import numpy as np
     return np.random.choice(values)
@@ -251,4 +254,6 @@ if __name__ == '__main__':
     
     print(MIN([5, 7, 10]))
     
+    f = lambda x : x**2
     
+    print(SUMMATION(1, 5, f))
