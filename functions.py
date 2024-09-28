@@ -58,6 +58,15 @@ def RANGE(start, stop, step, exclude=None, repeat=True, shape=None,
 def EXP(x):
     return float(np.exp(x))
 
+def LN(x):
+    import math
+    return math.log(x)
+
+def LOG(x, b=10):
+    import math
+    return math.log(x, b)
+    
+
 def ROUND(x, digits=None, nearest=None):
     
     if nearest is None and digits is None:
@@ -252,8 +261,10 @@ if __name__ == '__main__':
     #print(UNIQUE([2, 3, 4]))
     #print(UNIQUE([2, 3, 4.01, 4 + 1/100]))
     
-    print(MIN([5, 7, 10]))
+    #print(MIN([5, 7, 10]))
     
-    f = lambda x : x**2
+    #f = lambda x : x**2
     
-    print(SUMMATION(1, 5, f))
+    #print(SUMMATION(1, 5, f))
+    
+    print(LOG(64, 4))
