@@ -208,6 +208,15 @@ def SELECT(values):
     return np.random.choice(values)
 
 
+def GCD(a, b):
+    import math 
+    return math.gcd(a,b)
+
+def LCM(a, b):
+    import math 
+    return math.lcm(a,b)
+
+
 def TABLE(contents, config=None):
 
     default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
@@ -267,4 +276,4 @@ if __name__ == '__main__':
     
     #print(SUMMATION(1, 5, f))
     
-    print(LOG(64, 4))
+    print(LCM(4, 6))
