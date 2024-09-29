@@ -217,6 +217,12 @@ def LCM(a, b):
     return math.lcm(a,b)
 
 
+def REDUCE(a, b, part):
+    if part == 1:
+        return int(a / GCD(a,b))
+    if part == 2:
+        return int(b / GCD(a,b))
+
 def TABLE(contents, config=None):
 
     default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
@@ -276,4 +282,4 @@ if __name__ == '__main__':
     
     #print(SUMMATION(1, 5, f))
     
-    print(LCM(4, 6))
+    print(REDUCE(4, 6, 2))
