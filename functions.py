@@ -124,7 +124,7 @@ def DISTRACTORS_A(ans, n=4, step=1, seed=None):
     return distractors
 
 
-def DISTRACTORS(ans, n=4, p_rng=None, step=None, digits=None, seed=None):
+def DISTRACTORS(ans, n=4, p_rng=None, step=None, digits=None, nearest=None, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
@@ -141,8 +141,9 @@ def DISTRACTORS(ans, n=4, p_rng=None, step=None, digits=None, seed=None):
     for i in range(-k, n-k+1):
         if i == 0: continue
         d = ans + i * step
-        if digits is not None:
-            d = round(d, digits)
+        d = ROUND(d, digits=digits, nearest=nearest)
+        #if digits is not None:
+        #    d = round(d, digits)
         distractors.append(d)
 
     return distractors
@@ -177,6 +178,8 @@ def ARGMAX(values, axis=None):
 def WHERE(cond, a, b):
     return np.where(cond, a, b)
 
+def INT(x):
+    return int(x)
 
 def MNAME():
     names = [
@@ -282,4 +285,4 @@ if __name__ == '__main__':
     
     #print(SUMMATION(1, 5, f))
     
-    print(REDUCE(4, 6, 2))
+    print(DISTRACTORS(100.65, n=4, p_rng=[0.03, 0.08], digits=4, nearest=0.005))

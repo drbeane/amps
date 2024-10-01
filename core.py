@@ -338,6 +338,7 @@ class Question:
             display(Javascript(katex_autorender_min))
             
     def generate_qti(self, path='', quiz_version='new', print_versions=0, make_file=True, generate_zip=False):
+        import os
         
         if len(self.versions) == 0:
             print('No versions have been generated. Please call the generate() method.')
@@ -391,13 +392,20 @@ class Question:
                 print(qti_text)
         
         if make_file:
-            with open(f'{path}/{self.id}.txt', 'w') as file:
+            if path != '':
+                if path[-1] != '/':
+                    path = path + '/'
+            
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                
+            with open(f'{path}{self.id}.txt', 'w') as file:
                 file.write(qti_text)
             
         if generate_zip:
             import subprocess
-            cmd = f'text2qti "{path}/{self.id}.txt"'
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            cmd = f'text2qti "{path}{self.id}.txt"'
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
         
             if result.returncode != 0:
                 print(result.returncode)
