@@ -242,7 +242,7 @@ class Question:
             self.versions.append(version)
                 
         
-        display(HTML('<h3>Generating Versions</h3>'))
+        display(HTML('<b>Generating Versions</b>'))
         print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n')
         
 
@@ -299,7 +299,7 @@ class Question:
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<b>Version {i+1}</b>'))
+            display(HTML(f'<hr><b>Version {i+1}</b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
             print()
             
@@ -331,6 +331,8 @@ class Question:
             elif self.type == 'NUM':
                 print(f'ANSWER: {answer_options[0]} +- {self.margin}')
             print()    
+        
+        display(HTML('<hr>'))
         
         # This is a hack used to fix display in Colab
         if colab: 

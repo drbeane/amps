@@ -226,6 +226,16 @@ def REDUCE(a, b, part):
     if part == 2:
         return int(b / GCD(a,b))
 
+
+def SQRT(x):
+    return x**0.5
+
+def QUAD(a, b, c):
+    x1 = (-b - SQRT(b**2 - 4*a*c)) / (2*a)
+    x2 = (-b + SQRT(b**2 - 4*a*c)) / (2*a)
+    return x1, x2
+
+
 def TABLE(contents, config=None):
 
     default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
@@ -285,4 +295,4 @@ if __name__ == '__main__':
     
     #print(SUMMATION(1, 5, f))
     
-    print(DISTRACTORS(100.65, n=4, p_rng=[0.03, 0.08], digits=4, nearest=0.005))
+    print(QUAD(1, -5, 6))
