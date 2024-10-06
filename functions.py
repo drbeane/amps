@@ -220,11 +220,15 @@ def LCM(a, b):
     return math.lcm(a,b)
 
 
-def REDUCE(a, b, part):
+def REDUCE(a, b, part=None):
+    n = int(a / GCD(a,b))
+    d = int(b / GCD(a,b))
     if part == 1:
-        return int(a / GCD(a,b))
+        return n
     if part == 2:
-        return int(b / GCD(a,b))
+        return d
+    
+    return n, d
 
 
 def SQRT(x):
