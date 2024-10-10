@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats
 
 def RANGE(start, stop, step, exclude=None, repeat=True, shape=None, 
           length=None, min_diff=None, max_attempts=1000):
@@ -200,6 +201,15 @@ def FNAME():
     return np.random.choice(names)
 
 
+def NORMAL_CDF(x, mean=0, sd=1):
+    from scipy.stats import norm
+    return norm.cdf(x=x, loc=mean, scale=sd)
+    
+def INV_NORMAL_CDF(q, mean=0, sd=1):
+    from scipy.stats import norm
+    return norm.ppf(q=q, loc=mean, scale=sd)
+
+
 def SUM(values):
     return sum(values)
 
@@ -299,4 +309,8 @@ if __name__ == '__main__':
     
     #print(SUMMATION(1, 5, f))
     
-    print(QUAD(1, -5, 6))
+    #print(QUAD(1, -5, 6))
+    
+    #print(DISTRACTORS(ans=37, step=1))
+    
+    print(INV_NORMAL_CDF(0.25, 0, 1))
