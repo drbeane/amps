@@ -22,7 +22,11 @@ class Question:
         # Create items to store information from template
         self.var_script = ''
         self.conditions = []
-        self.text = ''
+        
+        self.text_raw = ''
+        self.text_canvas_new = ''
+        self.text_canvas_old = ''
+        
         self.answer_options = []
         
         self.versions = []
@@ -37,24 +41,18 @@ class Question:
             with open(file) as f:
                 self.qt = f.read()
 
-        # Parse the template
+        # Parse the template and text
         self.parse_template()
+        self.parse_text()
 
 
     def parse_template(self):
         
         mode = None
-        table_mode = False
-        
         
         # Split question template
         lines = self.qt.split('\n')
-        need_new_par = True
-        need_end_par = False
-        table_mode = False
-        table_contents = []
-        table_config = {}
-                
+        
         for line in lines:
             #line = line.strip()
             
@@ -108,61 +106,7 @@ class Question:
             #  TEXT
             #-----------------------------------------------
             elif mode == '#---TEXT---#':
-            
-                line = line.strip(' ')
-                
-                #------------------------------------------------
-                # Process Tables
-                #------------------------------------------------
-                if line == 'TABLE':
-                    table_mode = True
-                    
-                elif line == 'END TABLE':
-                    self.text += TABLE(table_contents, table_config)
-                    
-                    table_mode = False
-                    table_contents = []
-                    table_config = {}
-                
-                elif table_mode == True:
-                    if line[0] == '|':
-                        cells = line.split('|')[1:-1]
-                        cells = [c.strip(' ') for c in cells]
-                        table_contents.append(cells)
-                    else:
-                        params = line.split(';')
-                        for p_set in params:
-                            p,v = p_set.split(':')
-                            p = p.strip(' ')
-                            v = v.strip(' ')
-                            if v not in ['C', 'L', 'R']:
-                            #if np.char.isnumeric(v) or v == 'True' or v == 'False':
-                                v = eval(v)
-                            table_config[p.lower()] = v
-            
-                # A blank line indicates the start of a new paragraph. 
-                # Multiple consecutive blank lines are treated as a single blank line (at least for now)
-                # The <p> tag will be added at a later line. 
-                elif line == '':
-                    need_new_par = True
-                    if need_end_par == True:
-                        self.text += '</p>'
-                        need_end_par = False
-                
-                # Check to see if current line is a continuation of previous lines. 
-                # If so, append a space and the new line of text.
-                elif line[:3] == '...':
-                    line = line[3:].strip(' ')
-                    self.text += ' ' + line
-                
-                # Standard line of text. This will either start a new par or a new line.
-                else:
-                    if need_new_par == True:
-                        self.text += '<p>' + line
-                        need_new_par = False
-                        need_end_par = True
-                    else:
-                        self.text += '<br />' + line
+                self.text_raw += line + '\n'
 
             #-----------------------------------------------
             # ANSWER_OPTIONS
@@ -170,20 +114,144 @@ class Question:
             elif mode == '#---ANSWER_OPTIONS---#':
                 self.answer_options.append(line)
                 
-        # Close final paragraph in text.
-        if need_end_par == True: 
-            self.text += '</p>'
 
+    def parse_text(self):
+
+        sections = []
+        
+        cur_sec = {'mode':'text', 'prev':None, 'next':None, 'lines':[], 'blanks':0}
+        
+        mode = 'text'
+        
+        lines = self.text_raw.split('\n')
+        for line in lines:
+            prev_mode = mode
             
-        # Identify var block, store in self.var_script. 
+            #---------------------------------------
+            # Determine new mode
+            #---------------------------------------
+            stripped = line.strip(' ')
+            if stripped == '':
+                mode = 'blank'
+            elif stripped == 'TABLE' or mode == 'table':    
+                mode = 'table'
+            elif stripped[0] == '*':
+                mode = 'list'
+            elif stripped[0] == '$' and stripped[-1] == '$':
+                mode = 'eqn'
+            else:
+                mode = 'text'
+            
+            
+            if mode == 'blank':
+                cur_sec['blanks'] += 1
+            
+            else:
+                # Append content if mode has not changed
+                # Also start a new component for equations. 
+                if prev_mode == mode and mode != 'eqn':
+                    cur_sec['lines'].append(line)
+                
+                # If mode has changed, start a new component. 
+                else:
+                    cur_sec['next'] = mode
+                    old_mode = cur_sec['mode']
+                    sections.append(cur_sec)
+                    cur_sec = {'mode':mode, 'prev':old_mode, 'next':None, 'lines':[line], 'blanks':0}
+            
+            if stripped == 'END TABLE':
+                mode = None
+       
+        sections.append(cur_sec)
         
-        
-        # Identify and store conditions
-        
-        # Identify and store text
-        
-        # Identify and store answer options
+    
+        for s in sections:
+            temp = s.copy()
+            temp['lines'] = len(temp['lines'])
+            #print(temp)
 
+        text_new = ''
+        text_old = ''
+        text_jup = ''
+        for s in sections:
+            text_new += self.process_section(s, 'new')
+            text_old += self.process_section(s, 'old')
+            text_jup += self.process_section(s, 'jup')
+        
+        self.text_canvas_new = text_new
+        self.text_canvas_old = text_old
+        self.text_jupyter = text_jup
+        
+        
+
+    def process_section(self, s, output='new'):
+        text = ''
+        
+        N = s['blanks']
+        
+        if s['mode'] == 'text':
+            # Start new paragraph, if needed
+            if s['prev'] != 'text':
+                text += '<p style="margin: 0px 0px 12px 0px;">'
+                
+            # Glue lines together. 
+            for line in s['lines']:
+                text += line.strip(' ') + ' '
+            
+            # Close paragraph
+            K = 0 if (N <= 1 or s['next'] is None) else N
+            text += '\n' + '<br/>' * K + '</p>\n'
+            
+        
+        elif s['mode'] == 'list':
+            # Start list
+            text += '<ul>\n'
+            
+            # Add list items
+            for line in s['lines']:
+                line = line[1:].strip(' ')
+                text += f'    <li>{line}</li>\n'
+            
+            # End list
+            text += '</ul>\n'
+            text += blank_lines(N-1)
+            
+        elif s['mode'] == 'eqn':
+            K = 0 if (N <= 1 or s['next'] is None) else N
+            bp = '<br/>' * K
+            
+            for line in s['lines']:  # There should always be only one line in an EQN section. 
+                if line[:2] == '$$':
+                    text += f'<p style="text-align: center; margin: 0px 0px 12px 0px;">{line}{bp}</p>\n'
+                elif line[:4] == '    ':
+                    text += f'<p style="padding-left:40px; margin: 0px 0px 12px 0px;">{line}{bp}</p>\n'
+                else:
+                    text += f'<p margin: 0px 0px 12px 0px;>{line}{bp}</p>\n'
+        
+        elif s['mode'] == 'table':
+            
+            table_contents = []
+            table_config = {}
+            
+            for line in s['lines'][1:-2]:
+                cells = line.split('|')[1:-1]
+                cells = [c.strip(' ') for c in cells]
+                table_contents.append(cells)
+            params = s['lines'][-2].split(';')
+            for p_set in params:
+                p,v = p_set.split(':')
+                p = p.strip(' ')
+                v = v.strip(' ')
+                if v not in ['C', 'L', 'R']:
+                    v = eval(v)
+                table_config[p.lower()] = v
+            
+            text += TABLE(table_contents, table_config)
+            text += blank_lines(N-1)
+
+
+        return text
+        
 
     #------------------------------------------------------------
     # generate function creates versions from template
@@ -230,7 +298,7 @@ class Question:
                 if prevent_duplicates:
                     dup = False
                     for v in self.versions:
-                        if version['text'] == v['text']:
+                        if version['text_new'] == v['text_new']:
                             duplicates_encountered += 1
                             dup = True 
                             break
@@ -272,11 +340,14 @@ class Question:
         
         
         # Insert variables into text and answer options. 
-        text = insert_vars(self.text, scope)
-        answer_options = [insert_vars(ao, scope) for ao in self.answer_options]
+        version_dict = {
+            'text_new' : insert_vars(self.text_canvas_new, scope),
+            'text_old' : insert_vars(self.text_canvas_old, scope),
+            'text_jup' : insert_vars(self.text_jupyter, scope),
+            'answer_options' : [insert_vars(ao, scope) for ao in self.answer_options]
+        }
         
-        
-        return {'text':text, 'answer_options':answer_options}
+        return version_dict
 
 
     def display_versions(self, size=3, limit=None, compact_answers=False, colab=False):
@@ -296,7 +367,7 @@ class Question:
         display(HTML('<b>Displaying Versions</b><br /><br />'))
         
         for i in range(limit):
-            text = self.versions[i]['text']
+            text = self.versions[i]['text_jup']
             answer_options = self.versions[i]['answer_options']
             
             display(HTML(f'<hr><b>Version {i+1}</b>'))
@@ -339,7 +410,8 @@ class Question:
             from amps.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
             
-    def generate_qti(self, path='', quiz_version='new', print_versions=0, make_file=True, generate_zip=False):
+    def generate_qti(self, path='', quiz_version='new', print_versions=0, 
+                     make_file=True, generate_zip=False):
         import os
         
         if len(self.versions) == 0:
@@ -351,11 +423,17 @@ class Question:
         
         for i, v in enumerate(self.versions):
             
-            version_text = self.versions[i]['text']
-            
             if quiz_version == 'new':
-                version_text = version_text.replace('</p>', '<br/><br/></p>\n')
-                version_text = version_text.replace('</table>', '</table><p>&nbsp;</p>')
+                version_text = self.versions[i]['text_new']
+            elif quiz_version == 'old':
+                version_text = self.versions[i]['text_old']
+            else:
+                print('Quiz version not recognized.')
+                return
+            
+            #if quiz_version == 'new':
+                #version_text = version_text.replace('</p>', '<br/><br/></p>\n')
+                #version_text = version_text.replace('</table>', '</table><p>&nbsp;</p>')
                         
             num_len = len(str(i+1))
             spaces = ' ' * (num_len + 2)
@@ -418,22 +496,21 @@ class Question:
             else:
                 print('QTI zip generated successfully!')
         
-            
+
+
 
 def insert_vars(text, scope):
     a = 0
     b = 0
     temp = text
     new_text = ''
-    
-    # Lines below allow for three consecutive [[[
-    # This is a somewhat hacky solution that assumes the var is always on the inside
-    temp = temp.replace('[[[', '__[__[[')
-    temp = temp.replace(']]]', ']]__]__')
-    
+        
     while len(temp) > 0:
         
         a = temp.find('[[')
+        while temp[a+2] == '[':
+            a += 1
+        
         b = temp.find(']]', a)
         
         if a == -1 or b == -1:
@@ -446,13 +523,9 @@ def insert_vars(text, scope):
         
         temp = temp[b+2:]
 
-    # This puts the non-var-related square brackets back in.
-    new_text = new_text.replace('__[__', '[')
-    new_text = new_text.replace('__]__', ']')
-
     return new_text
 
-        
+
 def DISPLAY(x, scope):
        
     tokens = x.split(':')
@@ -480,6 +553,7 @@ def DISPLAY(x, scope):
             var_name = '__TEMP_VAR__'
         
         f_string = '{' + f'{var_name}:.{prec}f' + '}'
+        
         val_string = f_string.format(**scope)
         value = round(value, int(prec))
     
@@ -506,3 +580,8 @@ def DISPLAY(x, scope):
     
     return val_string
 
+
+def blank_lines(n):
+    if n <= 0: return ''
+    if n == 1: return '<p>&nbsp;</p>' + '\n'
+    return '<p>&nbsp;' + '<br />'*n + '</p>' + '\n'

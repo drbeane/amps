@@ -259,14 +259,16 @@ def TABLE(contents, config=None):
             config[k] = v
         
     
-    t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; background-color:#FFFFFF">\n'
+    t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
+    t += 'background-color:#FFFFFF; ; margin: 0px 0px 20px 0px;"">\n'
+    t += '<tbody>\n'
     for i, row in enumerate(contents):
         # Determine height
         temp = config['ch']
         ch = temp[i] if type(temp) == list else temp
 
         # Start row
-        t += f'<tr style="height:{ch}px">\n'
+        t += f'    <tr style="height:{ch}px">\n'
         
         for j, x in enumerate(row):
 
@@ -285,12 +287,12 @@ def TABLE(contents, config=None):
             align = temp[j] if type(temp) == list else temp
             a = {'C':'center', 'L':'left', 'R':'right'}[align]
                 
-            t += f'<td  style="border:1px solid black; background-color:{col}; '
+            t += f'        <td  style="border:1px solid black; background-color:{col}; '
             t += f'width:{cw}px; text-align:{a}">'
             t += f'{x}</td>\n'
 
-        t += '</tr>\n'
-    t += '</table>\n'
+        t += '    </tr>\n'
+    t += '</tbody>\n</table>\n'
     
     return t
 
