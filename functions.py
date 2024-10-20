@@ -296,6 +296,108 @@ def TABLE(contents, config=None):
     
     return t
 
+def ANNUITY_PV(n, i, due=False):
+    v = 1/(1+i)
+    pv = (1 - v**n) / i
+    if due: pv *= (1+i)*pv
+    return pv
+
+def ANNUITY_FV(n, i, due=False):
+    a = 1+i
+    fv = (a**n - 1) / i
+    if due: fv *= (1+i)*fv
+    return fv
+
+def INC_ANNUITY_PV(n, i, P=None, Q=None, due=False):
+    if P is None: P = 1
+    if Q is None: Q = 1
+    v = 1/(1+i)
+    an = ANNUITY_PV(n, i, due=False)
+    pv = P*an + Q * (an - n*v**n) / i
+    if due: pv *= (1+i)*pv
+    return pv
+
+def INC_ANNUITY_FV(n, i, P=None, Q=None, due=False):
+    if P is None: P = 1
+    if Q is None: Q = 1
+    a = 1+i
+    sn = ANNUITY_FV(n, i, due=False)
+    fv = P*sn + Q*(sn - n) / i
+    if due: fv *= (1+i)*fv
+    return fv
+
+def DEC_ANNUITY_PV(n, i, due=False):
+    return INC_ANNUITY_PV(n, i, P=n, Q=-1, due=due)
+
+def DEC_ANNUITY_FV(n, i, due=False):
+    return INC_ANNUITY_FV(n, i, P=n, Q=-1, due=due)
+
+def GEOM_ANNUITY_PV(n, i, g, P, due=False):
+    r = (i - g) / (1 + g)
+    print(r)
+    pv = P * ANNUITY_PV(n, r, due=False) / (1 + g)
+    if due: pv *= (1+i)*pv
+    return pv
+
+def GEOM_ANNUITY_FV(n, i, g, P, due=False):
+    pv = GEOM_ANNUITY_PV(n, i, g, P, due)
+    fv = pv * (1+i)**n
+    return fv
+    
+def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None):
+    none_count = 0
+    if N is None: none_count += 1
+    if I is None: none_count += 1
+    if PV is None: none_count += 1
+    if PMT is None: none_count += 1
+    if FV is None: none_count += 1
+    if none_count != 1:
+        print('Exactly one parameter must be missing from the function call.')
+    
+    if I is None:
+        
+        x = 0.05
+        
+        def new_x(x):
+            v = 1 / (1 + x)
+            top = x*PMT - x*PMT*v**N + x**2*FV*v**N + PV*x**2
+            bot = -PMT + N*x*PMT*v**(N+1) + PMT*v**N - N*FV*x**2*v**(N+1)
+            return x - top/bot
+        
+        while True:
+            old_x = x
+            x = new_x(x)
+            if abs(x - old_x) < 0.000000000001:
+                break
+        return x
+    
+    v = 1 / (1 + I)    
+    
+    if N is None:
+        x1 = -PV - PMT / I
+        x2 = FV - PMT / I
+        n = np.log(x1/x2) / np.log(v)
+        return round(n, 10)
+    
+    an = ANNUITY_PV(N, I)
+    
+    if PV is None:
+        pv = PMT * an + FV*v**N
+        return -pv
+    
+    if FV is None:
+        fv = (-PV - PMT * an) * (1+I)**N
+        return fv
+    
+    if PMT is None:
+        pmt = (-PV - FV * v**N) / an
+        return pmt
+        
+    
+    
+    pass
+
+
 if __name__ == '__main__':
     #print(RANGE(10, 150, 5))
     #print(ROUND(36.5, 5))
@@ -315,4 +417,4 @@ if __name__ == '__main__':
     
     #print(DISTRACTORS(ans=37, step=1))
     
-    print(INV_NORMAL_CDF(0.25, 0, 1))
+    print(TVM_SOLVER(N=20, I=None, PV=-1000, PMT=50, FV=20000))
