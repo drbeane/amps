@@ -334,7 +334,6 @@ def DEC_ANNUITY_FV(n, i, due=False):
 
 def GEOM_ANNUITY_PV(n, i, g, P, due=False):
     r = (i - g) / (1 + g)
-    print(r)
     pv = P * ANNUITY_PV(n, r, due=False) / (1 + g)
     if due: pv *= (1+i)*pv
     return pv
