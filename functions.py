@@ -213,6 +213,9 @@ def INV_NORMAL_CDF(q, mean=0, sd=1):
 def SUM(values):
     return sum(values)
 
+def ABS(x):
+    return abs(x)
+
 def SUMMATION(start, end, fn):
     return sum([fn(x) for x in range(start, end+1)])
 
