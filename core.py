@@ -1,5 +1,5 @@
 import numpy as np
-from amps.functions import *
+from exgen.functions import *
 
 
 class Question:
@@ -24,11 +24,8 @@ class Question:
         self.conditions = []
         
         self.text_raw = ''
-        self.text_canvas_new = ''
-        self.text_canvas_old = ''
-        
+        self.text = ''
         self.answer_options = []
-        
         self.versions = []
         
         # Check if a template has been provided. 
@@ -36,14 +33,28 @@ class Question:
             print('No problem template has been provided.')
             return
         
-        # If template has been provided as a file, load it. 
+        # If template file has been provided, load it. 
         if qt is None:
             with open(file) as f:
                 self.qt = f.read()
+            # Get id from filename if no id has been provided
+            if id is None:
+                filename = file.split('/')[-1]
+                self.id = filename.split('.')[0]
 
         # Parse the template and text
         self.parse_template()
         self.parse_text()
+        
+        if False:
+            print(f'{self.type = }\n')
+            print(f'{self.id = }\n')
+            print(f'{self.var_script = }\n')
+            print(f'{self.conditions = }\n')
+            print(f'{self.text_raw = }\n')
+            print(f'{self.text = }\n')
+            print(f'{self.answer_options = }\n')
+            print(f'{self.versions = }\n')
 
 
     def parse_template(self):
@@ -163,24 +174,17 @@ class Question:
                 mode = None
        
         sections.append(cur_sec)
-        
     
         for s in sections:
             temp = s.copy()
             temp['lines'] = len(temp['lines'])
             #print(temp)
 
-        text_new = ''
-        text_old = ''
-        text_jup = ''
+        text = ''
         for s in sections:
-            text_new += self.process_section(s, 'new')
-            text_old += self.process_section(s, 'old')
-            text_jup += self.process_section(s, 'jup')
+            text += self.process_section(s, 'new')
         
-        self.text_canvas_new = text_new
-        self.text_canvas_old = text_old
-        self.text_jupyter = text_jup
+        self.text = text
         
         
 
@@ -256,18 +260,20 @@ class Question:
     #------------------------------------------------------------
     # generate function creates versions from template
     #------------------------------------------------------------
-    def generate(self, n=1, seed=None, attempts=1000, prevent_duplicates=True):
+    def generate(self, n=1, seed=None, attempts=1000, prevent_duplicates=True, progress_bar=False):
         '''
         Description: Creates versions from template
         
         Paramters:
         n                  : Number of versions to generate.
-        attempts           : Total number of attempts allowed to generate each question
-        prevent_duplicates : ??????????????????
+        attempts           : Total number of attempts allowed to generate EACH question
+        prevent_duplicates : If true, question texts are compared and repeats are discarded. 
         seed               : Seed for RNG
         '''
         
         from IPython.core.display import HTML, display
+        #from tqdm.notebook import tqdm
+        from tqdm import tqdm
         
         self.versions = []
         
@@ -278,8 +284,15 @@ class Question:
             np.random.seed(seed)
         
         
+        # Create Progress Bar and Range
+        if progress_bar == True:
+            my_range = tqdm(range(n))
+        else:
+            my_range = range(n)
+        
+        
         # Loop for the desired number of questions
-        for i in range(n):
+        for i in my_range:
             
             # Attempt to generated a problem
             for k in range(attempts):
@@ -298,13 +311,22 @@ class Question:
                 if prevent_duplicates:
                     dup = False
                     for v in self.versions:
-                        if version['text_new'] == v['text_new']:
+                        if version['text'] == v['text']:
                             duplicates_encountered += 1
                             dup = True 
                             break
-                    if dup: continue
+                    if dup: 
+                        version = None
+                        continue
                 
                 break  # if here, a version was found
+            
+            if version is None:
+                print('--VERSION GENERATION FAILED--')
+                print(f'Failed to generate a satisfactory version in {attempts} attempts.')
+                print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
+                print(f'{len(self.versions)} versions successfully generated.')
+                return 
             
             # Add version to list
             self.versions.append(version)
@@ -319,7 +341,7 @@ class Question:
         
         # Prepare Scope
         scope = {}
-        exec('from amps.functions import *', scope)
+        exec('from exgen.functions import *', scope)
         
         
         # Execute Variables
@@ -341,9 +363,10 @@ class Question:
         
         # Insert variables into text and answer options. 
         version_dict = {
-            'text_new' : insert_vars(self.text_canvas_new, scope),
-            'text_old' : insert_vars(self.text_canvas_old, scope),
-            'text_jup' : insert_vars(self.text_jupyter, scope),
+            'text' : insert_vars(self.text, scope),
+            #'text_new' : insert_vars(self.text_canvas_new, scope),
+            #'text_old' : insert_vars(self.text_canvas_old, scope),
+            #'text_jup' : insert_vars(self.text_jupyter, scope),
             'answer_options' : [insert_vars(ao, scope) for ao in self.answer_options]
         }
         
@@ -367,14 +390,19 @@ class Question:
         display(HTML('<b>Displaying Versions</b><br /><br />'))
         
         for i in range(limit):
-            text = self.versions[i]['text_jup']
+            text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
             display(HTML(f'<hr><b>Version {i+1}</b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
+            display(HTML('<b>Answer Options</b>'))
             print()
             
-            # Display Multiple Choice Answers
+            #-----------------------------------------------
+            # Display Answers
+            #-----------------------------------------------
+            
+            # Multiple Choice
             if self.type == 'MC':
                 if compact_answers:
                     print(answer_options)
@@ -384,8 +412,9 @@ class Question:
                         x = letters[i]
                         #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
                         display(Markdown(f'`[{x}]` {ao}' if i==0 else f'`({x})` {ao}'))
-            
-            if self.type == 'MA':
+                        
+            # Multiple Answer
+            elif self.type == 'MA':
                 if compact_answers:
                     print(answer_options)
                 else:
@@ -396,21 +425,50 @@ class Question:
                         elif ao_mod[:3] == '[X]': ao_mod = '`[X]`' + ao_mod[3:]
                             
                         display(Markdown(f'{ao_mod}'))
-            
-                        
-            # Display Numerical Answers
+                
+            # Numerical
             elif self.type == 'NUM':
-                print(f'ANSWER: {answer_options[0]} +- {self.margin}')
+                print(f'ANSWER: {answer_options[0]}')
+            
+            # Matching
+            elif self.type == 'MT':
+                for ao in answer_options:
+                    display(Markdown(f'{ao}'))
+                    
+                
             print()    
         
         display(HTML('<hr>'))
         
         # This is a hack used to fix display in Colab
         if colab: 
-            from amps.autorender import katex_autorender_min
+            from exgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
+           
+    def generate_qti(self, path='', overwrite=True, shuffle=True, display_versions=None):
+        from exgen.qti_convert import makeQTI
+        import os
+        
+        if overwrite == False:
+            folders = os.listdir(path)
+            #folders = [x for x in folders if '.zip' in x]
+            #folders = [x for x in folders if self.id in x]
+            nums = [0]
+            for x in folders:
+                if '.zip' not in x:
+                    continue
+                n = x.replace(self.id, '').replace('_export.zip', '').replace('_v', '') 
+                if n != '':
+                    nums.append(int(n))
+                    
+            self.id = self.id + f'_v{max(nums)+1:02}'
+        
+        convertor = makeQTI(self, path=path, shuffle=shuffle)
+        convertor.run(display_versions=display_versions)
+        print('QTI file created successfully')
+        
             
-    def generate_qti(self, path='', quiz_version='new', print_versions=0, 
+    def generate_qti_OLD(self, path='', quiz_version='new', print_versions=0, 
                      make_file=True, generate_zip=False):
         import os
         
@@ -419,17 +477,18 @@ class Question:
             return
         
         qti_text = f'Quiz title: {self.id}\n'
-        qti_text += 'Quiz description: Generated by Vario.\n\n'
+        qti_text += 'Quiz description: Generated by ExSam.\n\n'
         
         for i, v in enumerate(self.versions):
             
-            if quiz_version == 'new':
-                version_text = self.versions[i]['text_new']
-            elif quiz_version == 'old':
-                version_text = self.versions[i]['text_old']
-            else:
-                print('Quiz version not recognized.')
-                return
+            version_text = self.versions[i]['text']
+            #if quiz_version == 'new':
+            #    version_text = self.versions[i]['text_new']
+            #elif quiz_version == 'old':
+            #    version_text = self.versions[i]['text_old']
+            #else:
+            #    print('Quiz version not recognized.')
+            #    return
             
             #if quiz_version == 'new':
                 #version_text = version_text.replace('</p>', '<br/><br/></p>\n')
@@ -442,6 +501,84 @@ class Question:
             
             qti_text += f'Title: Version {i+1}\n'
             qti_text += f'Points: 1\n'
+            qti_text += f'{i+1}. {version_text}'
+            
+            answer_options = self.versions[i]['answer_options']
+            
+            # Add Multiple Choice Answer Options
+            if self.type == 'MC':
+                letters = list('abcdefghijklmnopqrstuvwzyz')
+                for j, ao in enumerate(answer_options):
+                    x = letters[j]
+                    if x == 'a': x = '*a'
+                    qti_text += f'{x}) {ao}\n' 
+
+            # Add Multiple Answer Options
+            if self.type == 'MA':
+                for j, ao in enumerate(answer_options):
+                    ao_mod = ao.replace('[X]', '[*]')
+                    qti_text += f'{ao_mod}\n' 
+            
+                                            
+            # Add Numerical Answer
+            elif self.type == 'NUM':
+                ans = answer_options[0]
+                qti_text += f'=   {ans} +- {self.margin}'
+                        
+            qti_text += '\n\n'
+            
+            if i+1 == print_versions:    
+                print(qti_text)
+        
+        if make_file:
+            if path != '':
+                if path[-1] != '/':
+                    path = path + '/'
+            
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                
+            with open(f'{path}{self.id}.txt', 'w') as file:
+                file.write(qti_text)
+            
+        if generate_zip:
+            import subprocess
+            
+            cmd = f'text2qti "{path}{self.id}.txt"'           
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+        
+            if result.returncode != 0:
+                print(result.returncode)
+                print()
+                print(result.stdout)
+                print()
+                print(result.stderr)
+            else:
+                print('QTI zip generated successfully!')
+        
+
+    def generate_qti_2(self, path='', quiz_version='new', print_versions=0, 
+                     make_file=True, generate_zip=False):
+        import os
+        
+        if len(self.versions) == 0:
+            print('No versions have been generated. Please call the generate() method.')
+            return
+        
+        qti_text = ''
+        
+        for i, v in enumerate(self.versions):
+            
+            version_text = self.versions[i]['text']
+            version_text = version_text.replace('\n', '')
+
+            #num_len = len(str(i+1))
+            #spaces = ' ' * (num_len + 2)
+            #version_text = version_text.replace('\n', f'\n{spaces}')
+            
+            #qti_text += f'Title: Version {i+1}\n'
+            #qti_text += f'Points: 1\n'
+            qti_text += 'MT\n'
             qti_text += f'{i+1}. {version_text}\n'
             
             answer_options = self.versions[i]['answer_options']
@@ -466,6 +603,30 @@ class Question:
                 ans = answer_options[0]
                 qti_text += f'=   {ans} +- {self.margin}'
         
+            elif self.type == 'MT':
+                left = []
+                right = []  
+                LtoR = []
+                for j, ao in enumerate(answer_options):
+                    if ':' in ao:
+                        L, R = ao.split(':')
+                        L = L.strip()
+                        R = R.strip()
+                        left.append(L)
+                        if R not in right:
+                            right.append(R)
+                        k = right.index(R) + 1
+                        LtoR.append(k)
+                    else:
+                        R = ao.strip()
+                        if R not in right:
+                            right.append(R)
+                for k, L in enumerate(left):
+                    Rn = LtoR[k]
+                    qti_text += f'[right{Rn}]left{k+1}: {L}\n'
+                for k, R in enumerate(right):
+                    qti_text += f'right{k+1}: {R}\n'
+                
             qti_text += '\n\n'
             
             if i+1 == print_versions:    
@@ -484,7 +645,13 @@ class Question:
             
         if generate_zip:
             import subprocess
-            cmd = f'text2qti "{path}{self.id}.txt"'
+            
+            if self.type == 'MT':
+                cmd = f'python qtiConverter/qtiConverterApp.py "{path}{self.id}.txt"'
+            else:
+                cmd = f'text2qti "{path}{self.id}.txt"'
+            
+            
             result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
         
             if result.returncode != 0:
@@ -498,21 +665,36 @@ class Question:
         
 
 
-
 def insert_vars(text, scope):
     a = 0
     b = 0
     temp = text
     new_text = ''
-        
+    
     while len(temp) > 0:
+        if len(temp) < 3:
+            new_text += temp
+            break        
         
         a = temp.find('[[')
         while temp[a+2] == '[':
             a += 1
         
-        b = temp.find(']]', a)
         
+        # count [ before next ]
+        k = temp.find(']')
+        n = 0
+        for i in range(a+2, k):
+            if temp[i] == '[': 
+                n += 1
+                
+        # Skip 'interior' closing brackets
+        x = a
+        for i in range(n):
+            x = temp.find(']', x+1)
+        
+        b = temp.find(']]', x+1)
+                
         if a == -1 or b == -1:
             new_text += temp 
             break

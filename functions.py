@@ -19,6 +19,8 @@ def RANGE(start, stop, step, exclude=None, repeat=True, shape=None,
         values = []
         # Build list of options
         options = np.arange(start, stop+step, step).round(10).tolist()
+        options = [ROUND(o,nearest=step) for o in options]
+        
         if exclude is not None:
             options = [v for v in options if v not in exclude]
         
@@ -83,6 +85,30 @@ def ROUND(x, digits=None, nearest=None):
 
 def DIFF(x, y):
     return abs(x - y)
+
+def MIN_DIFF(values):
+    n = len(values)
+    min_diff = None
+    for i in range(0, n):
+        for j in range(i+1, n):
+            diff = abs(values[i] - values[j])
+            if min_diff is None:
+                min_diff = diff
+            elif diff < min_diff:
+                min_diff = diff
+    return min_diff
+
+def MAX_DIFF(values):
+    n = len(values)
+    max_diff = None
+    for i in range(0, n):
+        for j in range(i+1, n):
+            diff = abs(values[i] - values[j])
+            if max_diff is None:
+                max_diff = diff
+            elif diff > max_diff:
+                max_diff = diff
+    return max_diff
 
 
 def NOT(b):
@@ -298,6 +324,69 @@ def TABLE(contents, config=None):
     t += '</tbody>\n</table>\n'
     
     return t
+
+
+
+def TABLE_NEW(contents, row_labels=None, col_labels=None, config=None):
+
+    default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
+    if config == None: config = {}
+    for k,v in default_config.items():
+        if k not in config.keys():
+            config[k] = v
+        
+    
+    t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
+    t += 'background-color:#FFFFFF; ; margin: 0px 0px 20px 0px;"">\n'
+    t += '<tbody>\n'
+    
+    
+    # Fold labels into contents:
+    # Current assumes that upper right cell belows to row labels
+    new_contents = contents.copy()
+    if col_labels is not None:
+        new_contents.insert(0, col_labels)
+    if row_labels is not None:
+        for i, rl in enumerate(row_labels):
+            new_contents[i].insert(0,rl)
+        
+    
+    for i, row in enumerate(new_contents):
+        # Determine height
+        temp = config['ch']
+        ch = temp[i] if type(temp) == list else temp
+
+        # Start row
+        t += f'    <tr style="height:{ch}px">\n'
+        
+        for j, x in enumerate(row):
+
+            # Determine Cell Color
+            col = '#FFFFFF'
+            if (config['sr1'] and i == 0) or (config['sc1'] and j == 0):
+                col = '#E0E0E0'
+                x = f'<b>{x}</b>'
+
+            # Determine width
+            temp = config['cw']
+            cw = temp[j] if type(temp) == list else temp
+            
+            # Alignment
+            temp = config['align']
+            align = temp[j] if type(temp) == list else temp
+            a = {'C':'center', 'L':'left', 'R':'right'}[align]
+                
+            t += f'        <td  style="border:1px solid black; background-color:{col}; '
+            t += f'width:{cw}px; text-align:{a}">'
+            t += f'{x}</td>\n'
+
+        t += '    </tr>\n'
+    t += '</tbody>\n</table>'
+    
+    return t
+
+
+
 
 def ANNUITY_PV(n, i, due=False):
     v = 1/(1+i)
